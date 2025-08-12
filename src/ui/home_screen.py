@@ -3,24 +3,58 @@ Home Screen UI for Golf Cart System
 """
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
-                             QPushButton, QLabel, QFrame, QGraphicsDropShadowEffect)
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QPropertyAnimation, QRect
-from PyQt5.QtGui import QFont, QPainter, QPainterPath, QBrush, QColor, QLinearGradient
+                             QPushButton, QLabel, QFrame, QGraphicsDropShadowEffect,
+                             QGraphicsOpacityEffect)
+from PyQt5.QtCore import (Qt, QTimer, pyqtSignal, QPropertyAnimation, QRect, 
+                          QEasingCurve, QSequentialAnimationGroup, QParallelAnimationGroup)
+from PyQt5.QtGui import (QFont, QPainter, QPainterPath, QBrush, QColor, 
+                         QLinearGradient, QRadialGradient, QPen)
 from datetime import datetime
 
 class RoundedFrame(QFrame):
-    def __init__(self, radius=20, parent=None):
+    def __init__(self, radius=20, gradient=None, parent=None):
         super().__init__(parent)
         self.radius = radius
+        self.gradient = gradient
+        self.hover = False
+        self.setMouseTracking(True)
+        
+        # Add shadow effect
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(25)
+        shadow.setOffset(0, 5)
+        shadow.setColor(QColor(0, 0, 0, 60))
+        self.setGraphicsEffect(shadow)
+        
+    def enterEvent(self, event):
+        self.hover = True
+        self.update()
+        
+    def leaveEvent(self, event):
+        self.hover = False
+        self.update()
         
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform)
         
+        # Create path
         path = QPainterPath()
         path.addRoundedRect(0, 0, self.width(), self.height(), self.radius, self.radius)
         
-        painter.fillPath(path, QBrush(QColor(self.palette().color(self.backgroundRole()))))
+        # Background with gradient or solid color
+        if self.gradient:
+            painter.fillPath(path, self.gradient)
+        else:
+            base_color = QColor("#2a3142")
+            if self.hover:
+                base_color = base_color.lighter(110)
+            painter.fillPath(path, QBrush(base_color))
+        
+        # Subtle border
+        painter.setPen(QPen(QColor(255, 255, 255, 20), 1))
+        painter.drawPath(path)
 
 class ModernButton(QPushButton):
     def __init__(self, icon_text, label, parent=None):
@@ -29,13 +63,20 @@ class ModernButton(QPushButton):
         self.label = label
         self.setFixedSize(80, 80)
         self.setCursor(Qt.PointingHandCursor)
+        self._active = False
+        
+    def set_active(self, active):
+        self._active = active
+        self.update()
         
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         
         # Draw circle background
-        if self.isDown():
+        if self._active:
+            painter.setBrush(QBrush(QColor(59, 127, 246)))  # Active blue
+        elif self.isDown():
             painter.setBrush(QBrush(QColor(60, 60, 60)))
         else:
             painter.setBrush(QBrush(QColor(45, 45, 45)))
@@ -44,8 +85,11 @@ class ModernButton(QPushButton):
         painter.drawEllipse(0, 0, 80, 80)
         
         # Draw icon
-        painter.setPen(QColor(100, 150, 200))
-        font = QFont("SF Pro Display", 32)
+        if self._active:
+            painter.setPen(Qt.white)
+        else:
+            painter.setPen(QColor(100, 150, 200))
+        font = QFont("Arial", 32)  # Use Arial as fallback
         painter.setFont(font)
         painter.drawText(self.rect(), Qt.AlignCenter, self.icon_text)
 
@@ -161,9 +205,10 @@ class HomeScreen(QWidget):
         layout = QHBoxLayout()
         layout.setContentsMargins(20, 20, 20, 20)
         
-        # Weather icon
+        # Weather icon (using text as placeholder)
         weather_icon = QLabel("☀")
-        weather_icon.setStyleSheet("color: #FDB813; font-size: 48px;")
+        weather_icon.setStyleSheet("color: #FDB813; font-size: 40px;")
+        weather_icon.setFixedWidth(50)
         layout.addWidget(weather_icon)
         
         # Temperature and conditions
@@ -377,18 +422,16 @@ class HomeScreen(QWidget):
             ("⚙", "settings", self.launch_settings)
         ]
         
+        self.nav_buttons = {}
         for icon, name, callback in buttons:
             btn = ModernButton(icon, name)
             btn.clicked.connect(callback)
             
             if name == "home":
-                # Highlight home button
-                btn.setStyleSheet("""
-                    ModernButton {
-                        background-color: #3b7ff6;
-                    }
-                """)
+                # Highlight home button by default
+                btn.set_active(True)
             
+            self.nav_buttons[name] = btn
             layout.addWidget(btn)
         
         nav_bar.setLayout(layout)

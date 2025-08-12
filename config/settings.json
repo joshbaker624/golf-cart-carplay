@@ -1,12 +1,12 @@
 {
   "audio": {
     "volume": 70,
-    "output_device": "default"
+    "output_device": "Default"
   },
   "display": {
     "brightness": 80,
     "auto_dim": true,
-    "timeout_seconds": 300
+    "timeout_seconds": 296
   },
   "carplay": {
     "enabled": true,

@@ -12,7 +12,7 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QIcon
 
 # Import UI modules
-from ui.home_screen import HomeScreen
+from ui.home_screen_clean import HomeScreen
 from ui.music_player import MusicPlayer
 from ui.gps_navigation import GPSNavigation
 from ui.settings_screen import SettingsScreen
@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 class GolfCartSystem(QMainWindow):
     def __init__(self):
         super().__init__()
+        self.load_settings()  # Load settings first
         self.init_ui()
-        self.load_settings()
         self.init_carplay()
         
     def init_ui(self):

@@ -65,15 +65,25 @@ class CarPlayManager(QObject):
     def check_usb_devices(self):
         """Check for connected Apple devices"""
         try:
-            # Use lsusb to find Apple devices
-            result = subprocess.run(
-                ['lsusb'], 
-                capture_output=True, 
-                text=True
-            )
-            
-            # Apple vendor ID is 05ac
-            apple_device_found = '05ac:' in result.stdout
+            # Check platform
+            import platform
+            if platform.system() == 'Darwin':  # macOS
+                # Use system_profiler on Mac
+                result = subprocess.run(
+                    ['system_profiler', 'SPUSBDataType'], 
+                    capture_output=True, 
+                    text=True
+                )
+                apple_device_found = 'iPhone' in result.stdout or 'iPad' in result.stdout
+            else:
+                # Use lsusb on Linux/Raspberry Pi
+                result = subprocess.run(
+                    ['lsusb'], 
+                    capture_output=True, 
+                    text=True
+                )
+                # Apple vendor ID is 05ac
+                apple_device_found = '05ac:' in result.stdout
             
             if apple_device_found and not self.connected:
                 self.connected = True
@@ -90,11 +100,16 @@ class CarPlayManager(QObject):
             
     def launch_carplay(self):
         """Launch CarPlay interface"""
-        if self.openauto_path:
-            self.launch_openauto()
-        else:
-            # Launch our custom CarPlay view
-            self.launch_custom_carplay()
+        try:
+            if self.openauto_path:
+                self.launch_openauto()
+            else:
+                # Launch our custom CarPlay view
+                self.launch_custom_carplay()
+        except Exception as e:
+            logger.error(f"Error in launch_carplay: {e}")
+            import traceback
+            traceback.print_exc()
             
     def launch_openauto(self):
         """Launch OpenAuto Pro"""
@@ -123,18 +138,38 @@ class CarPlayManager(QObject):
             
     def launch_custom_carplay(self):
         """Launch custom CarPlay interface (fallback)"""
-        # Hide main window and show CarPlay widget
-        if self.parent:
-            self.parent.hide()
+        try:
+            # Import mock CarPlay
+            from .mock_carplay import MockCarPlay
             
-        self.carplay_widget = CarPlayWidget(self.parent)
-        self.carplay_widget.show()
+            # Create CarPlay widget (don't pass parent to avoid issues)
+            self.carplay_widget = MockCarPlay()
+            self.carplay_widget.closed.connect(self.on_carplay_closed)
+            
+            # Hide main window after creating CarPlay
+            if self.parent:
+                self.parent.hide()
+                
+            # Show CarPlay widget
+            self.carplay_widget.show()
+            logger.info("Launched mock CarPlay interface")
+            
+        except Exception as e:
+            logger.error(f"Error in launch_custom_carplay: {e}")
+            import traceback
+            traceback.print_exc()
+            # Show parent again if launch failed
+            if self.parent:
+                self.parent.show()
         
     def on_carplay_closed(self):
         """Handle CarPlay process closure"""
         logger.info("CarPlay process closed")
         if self.parent and self.parent.isHidden():
             self.parent.show()
+        # Clean up widget reference
+        if hasattr(self, 'carplay_widget'):
+            self.carplay_widget = None
             
     def stop_carplay(self):
         """Stop CarPlay interface"""
