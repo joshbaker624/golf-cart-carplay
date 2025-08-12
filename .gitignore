@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+config/playlist.json
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# Audio/Media files
+*.mp3
+*.wav
+*.flac
+*.m4a
+*.ogg
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Private/Sensitive
+.env
+secrets/
+private/

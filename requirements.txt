@@ -1,0 +1,10 @@
+PyQt5==5.15.7
+pyqt5-tools==5.15.7.3.2
+python-vlc==3.0.18122
+gpsd-py3==0.3.0
+pyserial==3.5
+RPi.GPIO==0.7.1
+pygame==2.5.2
+Pillow==10.0.0
+requests==2.31.0
+python-dotenv==1.0.0
