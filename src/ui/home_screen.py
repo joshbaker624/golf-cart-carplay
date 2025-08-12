@@ -2,11 +2,52 @@
 Home Screen UI for Golf Cart System
 """
 
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, 
-                             QPushButton, QLabel, QFrame)
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QFont, QPixmap
+from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
+                             QPushButton, QLabel, QFrame, QGraphicsDropShadowEffect)
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal, QPropertyAnimation, QRect
+from PyQt5.QtGui import QFont, QPainter, QPainterPath, QBrush, QColor, QLinearGradient
 from datetime import datetime
+
+class RoundedFrame(QFrame):
+    def __init__(self, radius=20, parent=None):
+        super().__init__(parent)
+        self.radius = radius
+        
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        path = QPainterPath()
+        path.addRoundedRect(0, 0, self.width(), self.height(), self.radius, self.radius)
+        
+        painter.fillPath(path, QBrush(QColor(self.palette().color(self.backgroundRole()))))
+
+class ModernButton(QPushButton):
+    def __init__(self, icon_text, label, parent=None):
+        super().__init__(parent)
+        self.icon_text = icon_text
+        self.label = label
+        self.setFixedSize(80, 80)
+        self.setCursor(Qt.PointingHandCursor)
+        
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # Draw circle background
+        if self.isDown():
+            painter.setBrush(QBrush(QColor(60, 60, 60)))
+        else:
+            painter.setBrush(QBrush(QColor(45, 45, 45)))
+            
+        painter.setPen(Qt.NoPen)
+        painter.drawEllipse(0, 0, 80, 80)
+        
+        # Draw icon
+        painter.setPen(QColor(100, 150, 200))
+        font = QFont("SF Pro Display", 32)
+        painter.setFont(font)
+        painter.drawText(self.rect(), Qt.AlignCenter, self.icon_text)
 
 class HomeScreen(QWidget):
     def __init__(self, parent=None):
@@ -17,162 +58,341 @@ class HomeScreen(QWidget):
         
     def init_ui(self):
         """Initialize the home screen UI"""
+        # Set dark theme background
+        self.setStyleSheet("background-color: #1a1f2e;")
+        
         layout = QVBoxLayout()
+        layout.setContentsMargins(30, 30, 30, 30)
         layout.setSpacing(20)
         
-        # Header with clock and status
+        # Header with time and status
         header = self.create_header()
         layout.addWidget(header)
         
-        # Main buttons grid
-        buttons_layout = QVBoxLayout()
-        buttons_layout.setSpacing(15)
+        # Main content area with cards
+        content_layout = QHBoxLayout()
+        content_layout.setSpacing(20)
         
-        # Row 1: CarPlay and Music
-        row1 = QHBoxLayout()
-        row1.setSpacing(15)
+        # Left column - Weather and Music
+        left_column = QVBoxLayout()
+        left_column.setSpacing(20)
         
-        self.carplay_btn = self.create_button(
-            "Apple CarPlay", 
-            self.launch_carplay,
-            "#007AFF"  # Apple blue
-        )
-        row1.addWidget(self.carplay_btn)
+        # Weather card
+        self.weather_card = self.create_weather_card()
+        left_column.addWidget(self.weather_card)
         
-        self.music_btn = self.create_button(
-            "Music Player",
-            self.launch_music,
-            "#1DB954"  # Spotify green
-        )
-        row1.addWidget(self.music_btn)
+        # Music card
+        self.music_card = self.create_music_card()
+        left_column.addWidget(self.music_card)
         
-        buttons_layout.addLayout(row1)
+        left_column.addStretch()
+        content_layout.addLayout(left_column)
         
-        # Row 2: GPS and Settings
-        row2 = QHBoxLayout()
-        row2.setSpacing(15)
+        # Right side - Navigation card
+        self.nav_card = self.create_navigation_card()
+        content_layout.addWidget(self.nav_card)
         
-        self.gps_btn = self.create_button(
-            "GPS Navigation",
-            self.launch_gps,
-            "#EA4335"  # Google red
-        )
-        row2.addWidget(self.gps_btn)
+        layout.addLayout(content_layout)
         
-        self.settings_btn = self.create_button(
-            "Settings",
-            self.launch_settings,
-            "#666666"  # Gray
-        )
-        row2.addWidget(self.settings_btn)
-        
-        buttons_layout.addLayout(row2)
-        
-        # Add buttons to main layout
-        layout.addLayout(buttons_layout)
-        
-        # Status bar at bottom
-        self.status_bar = self.create_status_bar()
-        layout.addWidget(self.status_bar)
+        # Bottom navigation bar
+        nav_bar = self.create_navigation_bar()
+        layout.addWidget(nav_bar)
         
         self.setLayout(layout)
         
     def create_header(self):
         """Create header with clock and system info"""
         header = QFrame()
-        header.setFrameStyle(QFrame.NoFrame)
-        header.setFixedHeight(80)
+        header.setFixedHeight(60)
+        header.setStyleSheet("background-color: transparent;")
         
         layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         
-        # Clock
+        # Time
         self.clock_label = QLabel()
         self.clock_label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
-        font = QFont("Arial", 36, QFont.Bold)
+        font = QFont("SF Pro Display", 20, QFont.Medium)
         self.clock_label.setFont(font)
         self.clock_label.setStyleSheet("color: white;")
         layout.addWidget(self.clock_label)
         
         layout.addStretch()
         
-        # Connection status
-        self.status_label = QLabel("Ready")
-        self.status_label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        self.status_label.setStyleSheet("""
-            color: #4CAF50;
-            font-size: 18px;
-            font-weight: bold;
-            padding: 5px 10px;
-            background-color: rgba(76, 175, 80, 0.2);
-            border-radius: 5px;
-        """)
-        layout.addWidget(self.status_label)
+        # Status indicators
+        status_layout = QHBoxLayout()
+        status_layout.setSpacing(20)
+        
+        # Carrier/Connection
+        self.carrier_label = QLabel("Inspired Mobile")
+        self.carrier_label.setStyleSheet("color: rgba(255, 255, 255, 0.8); font-size: 16px;")
+        status_layout.addWidget(self.carrier_label)
+        
+        # Signal strength
+        self.signal_label = QLabel("●●●")
+        self.signal_label.setStyleSheet("color: rgba(255, 255, 255, 0.8); font-size: 14px;")
+        status_layout.addWidget(self.signal_label)
+        
+        # WiFi
+        self.wifi_label = QLabel("⚡")
+        self.wifi_label.setStyleSheet("color: rgba(255, 255, 255, 0.8); font-size: 18px;")
+        status_layout.addWidget(self.wifi_label)
+        
+        # Battery
+        self.battery_label = QLabel("■")
+        self.battery_label.setStyleSheet("color: rgba(255, 255, 255, 0.8); font-size: 18px;")
+        status_layout.addWidget(self.battery_label)
+        
+        layout.addLayout(status_layout)
         
         header.setLayout(layout)
         return header
         
-    def create_button(self, text, callback, color="#2d2d2d"):
-        """Create a styled button"""
-        button = QPushButton(text)
-        button.clicked.connect(callback)
-        button.setMinimumHeight(120)
-        button.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {color};
-                color: white;
-                border: none;
-                border-radius: 15px;
-                font-size: 24px;
-                font-weight: bold;
-            }}
-            QPushButton:pressed {{
-                background-color: {self.darken_color(color)};
-            }}
-        """)
-        return button
-        
-    def darken_color(self, color):
-        """Darken a hex color by 20%"""
-        if color.startswith('#'):
-            color = color[1:]
-        rgb = tuple(int(color[i:i+2], 16) for i in (0, 2, 4))
-        darkened = tuple(int(c * 0.8) for c in rgb)
-        return f"#{darkened[0]:02x}{darkened[1]:02x}{darkened[2]:02x}"
-        
-    def create_status_bar(self):
-        """Create status bar with system info"""
-        status_bar = QFrame()
-        status_bar.setFrameStyle(QFrame.NoFrame)
-        status_bar.setFixedHeight(40)
-        status_bar.setStyleSheet("""
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
+    def create_weather_card(self):
+        """Create weather information card"""
+        card = RoundedFrame(20)
+        card.setFixedHeight(100)
+        card.setStyleSheet("""
+            RoundedFrame {
+                background-color: #2a3142;
+            }
         """)
         
         layout = QHBoxLayout()
-        layout.setContentsMargins(15, 5, 15, 5)
+        layout.setContentsMargins(20, 20, 20, 20)
         
-        # Battery/Power status
-        self.power_label = QLabel("Power: Connected")
-        self.power_label.setStyleSheet("color: #4CAF50; font-size: 14px;")
-        layout.addWidget(self.power_label)
+        # Weather icon
+        weather_icon = QLabel("☀")
+        weather_icon.setStyleSheet("color: #FDB813; font-size: 48px;")
+        layout.addWidget(weather_icon)
         
+        # Temperature and conditions
+        info_layout = QVBoxLayout()
+        info_layout.setSpacing(5)
+        
+        temp_label = QLabel("30°C")
+        temp_label.setStyleSheet("color: white; font-size: 24px; font-weight: bold;")
+        info_layout.addWidget(temp_label)
+        
+        condition_label = QLabel("Sunny")
+        condition_label.setStyleSheet("color: rgba(255, 255, 255, 0.7); font-size: 16px;")
+        info_layout.addWidget(condition_label)
+        
+        layout.addLayout(info_layout)
         layout.addStretch()
         
-        # Temperature (if available)
-        self.temp_label = QLabel("CPU: --°C")
-        self.temp_label.setStyleSheet("color: white; font-size: 14px;")
-        layout.addWidget(self.temp_label)
+        card.setLayout(layout)
+        return card
         
-        layout.addStretch()
+    def create_music_card(self):
+        """Create now playing music card"""
+        card = RoundedFrame(20)
+        card.setFixedHeight(200)
+        card.setStyleSheet("""
+            RoundedFrame {
+                background-color: #2a3142;
+            }
+        """)
         
-        # GPS status
-        self.gps_status_label = QLabel("GPS: Searching...")
-        self.gps_status_label.setStyleSheet("color: #FFC107; font-size: 14px;")
-        layout.addWidget(self.gps_status_label)
+        layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
         
-        status_bar.setLayout(layout)
-        return status_bar
+        # Album art placeholder
+        album_frame = QFrame()
+        album_frame.setFixedSize(60, 60)
+        album_frame.setStyleSheet("""
+            background-color: #6366f1;
+            border-radius: 10px;
+        """)
+        
+        # Song info
+        song_layout = QVBoxLayout()
+        song_layout.setSpacing(5)
+        
+        self.song_title = QLabel("Yuri on Ice")
+        self.song_title.setStyleSheet("color: white; font-size: 18px; font-weight: bold;")
+        song_layout.addWidget(self.song_title)
+        
+        self.artist_label = QLabel("Taro Umebayashi")
+        self.artist_label.setStyleSheet("color: rgba(255, 255, 255, 0.7); font-size: 14px;")
+        song_layout.addWidget(self.artist_label)
+        
+        # Controls
+        controls_layout = QHBoxLayout()
+        controls_layout.setSpacing(20)
+        
+        prev_btn = QPushButton("⏮")
+        prev_btn.setFixedSize(50, 50)
+        prev_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(255, 255, 255, 0.1);
+                color: white;
+                border: none;
+                border-radius: 25px;
+                font-size: 20px;
+            }
+            QPushButton:pressed {
+                background-color: rgba(255, 255, 255, 0.2);
+            }
+        """)
+        
+        play_btn = QPushButton("⏸")
+        play_btn.setFixedSize(50, 50)
+        play_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(255, 255, 255, 0.1);
+                color: white;
+                border: none;
+                border-radius: 25px;
+                font-size: 20px;
+            }
+            QPushButton:pressed {
+                background-color: rgba(255, 255, 255, 0.2);
+            }
+        """)
+        
+        next_btn = QPushButton("⏭")
+        next_btn.setFixedSize(50, 50)
+        next_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(255, 255, 255, 0.1);
+                color: white;
+                border: none;
+                border-radius: 25px;
+                font-size: 20px;
+            }
+            QPushButton:pressed {
+                background-color: rgba(255, 255, 255, 0.2);
+            }
+        """)
+        
+        controls_layout.addWidget(prev_btn)
+        controls_layout.addWidget(play_btn)
+        controls_layout.addWidget(next_btn)
+        controls_layout.addStretch()
+        
+        layout.addWidget(album_frame)
+        layout.addLayout(song_layout)
+        layout.addLayout(controls_layout)
+        
+        card.setLayout(layout)
+        
+        # Connect buttons
+        prev_btn.clicked.connect(lambda: self.parent.show_screen('music'))
+        play_btn.clicked.connect(lambda: self.parent.show_screen('music'))
+        next_btn.clicked.connect(lambda: self.parent.show_screen('music'))
+        
+        return card
+        
+    def create_navigation_card(self):
+        """Create navigation card with map preview"""
+        card = RoundedFrame(20)
+        card.setMinimumWidth(400)
+        card.setStyleSheet("""
+            RoundedFrame {
+                background-color: #2a3142;
+            }
+        """)
+        
+        layout = QVBoxLayout()
+        layout.setContentsMargins(20, 20, 20, 20)
+        
+        # Navigation instruction
+        nav_frame = RoundedFrame(15)
+        nav_frame.setFixedHeight(80)
+        nav_frame.setStyleSheet("""
+            RoundedFrame {
+                background-color: #3b7ff6;
+            }
+        """)
+        
+        nav_layout = QHBoxLayout()
+        nav_layout.setContentsMargins(15, 15, 15, 15)
+        
+        # Turn arrow
+        arrow_label = QLabel("↰")
+        arrow_label.setStyleSheet("color: white; font-size: 32px;")
+        nav_layout.addWidget(arrow_label)
+        
+        # Direction info
+        dir_layout = QVBoxLayout()
+        distance_label = QLabel("500 m")
+        distance_label.setStyleSheet("color: white; font-size: 20px; font-weight: bold;")
+        dir_layout.addWidget(distance_label)
+        
+        street_label = QLabel("Turn left towards M G Road")
+        street_label.setStyleSheet("color: rgba(255, 255, 255, 0.9); font-size: 14px;")
+        dir_layout.addWidget(street_label)
+        
+        nav_layout.addLayout(dir_layout)
+        nav_layout.addStretch()
+        
+        nav_frame.setLayout(nav_layout)
+        layout.addWidget(nav_frame)
+        
+        # Map preview (placeholder)
+        map_frame = QFrame()
+        map_frame.setStyleSheet("""
+            background-color: #1a1f2e;
+            border-radius: 15px;
+        """)
+        map_frame.setMinimumHeight(300)
+        
+        # Simple map representation
+        map_layout = QVBoxLayout()
+        map_label = QLabel("Map Preview")
+        map_label.setAlignment(Qt.AlignCenter)
+        map_label.setStyleSheet("color: rgba(255, 255, 255, 0.3); font-size: 24px;")
+        map_layout.addWidget(map_label)
+        map_frame.setLayout(map_layout)
+        
+        layout.addWidget(map_frame)
+        
+        card.setLayout(layout)
+        
+        # Make clickable
+        card.mousePressEvent = lambda e: self.parent.show_screen('gps')
+        
+        return card
+        
+    def create_navigation_bar(self):
+        """Create bottom navigation bar"""
+        nav_bar = QFrame()
+        nav_bar.setFixedHeight(100)
+        nav_bar.setStyleSheet("""
+            QFrame {
+                background-color: transparent;
+            }
+        """)
+        
+        layout = QHBoxLayout()
+        layout.setSpacing(30)
+        
+        # Navigation buttons
+        buttons = [
+            ("⊞", "home", self.launch_home),
+            ("♪", "music", self.launch_music),
+            ("☎", "phone", self.launch_phone),
+            ("▲", "nav", self.launch_gps),
+            ("⚙", "settings", self.launch_settings)
+        ]
+        
+        for icon, name, callback in buttons:
+            btn = ModernButton(icon, name)
+            btn.clicked.connect(callback)
+            
+            if name == "home":
+                # Highlight home button
+                btn.setStyleSheet("""
+                    ModernButton {
+                        background-color: #3b7ff6;
+                    }
+                """)
+            
+            layout.addWidget(btn)
+        
+        nav_bar.setLayout(layout)
+        return nav_bar
         
     def setup_clock(self):
         """Setup clock timer"""
@@ -181,45 +401,24 @@ class HomeScreen(QWidget):
         self.clock_timer.start(1000)  # Update every second
         self.update_clock()
         
-        # System status timer
-        self.status_timer = QTimer()
-        self.status_timer.timeout.connect(self.update_system_status)
-        self.status_timer.start(5000)  # Update every 5 seconds
-        
     def update_clock(self):
         """Update clock display"""
         current_time = datetime.now().strftime("%I:%M %p")
         self.clock_label.setText(current_time)
         
-    def update_system_status(self):
-        """Update system status information"""
-        # Update CPU temperature (Raspberry Pi specific)
-        try:
-            with open('/sys/class/thermal/thermal_zone0/temp', 'r') as f:
-                temp = float(f.read()) / 1000
-                self.temp_label.setText(f"CPU: {temp:.1f}°C")
-        except:
-            pass
-            
-    def launch_carplay(self):
-        """Launch CarPlay interface"""
-        if hasattr(self.parent, 'carplay_manager'):
-            self.parent.carplay_manager.launch_carplay()
-        else:
-            self.status_label.setText("CarPlay Not Available")
-            self.status_label.setStyleSheet("""
-                color: #f44336;
-                font-size: 18px;
-                font-weight: bold;
-                padding: 5px 10px;
-                background-color: rgba(244, 67, 54, 0.2);
-                border-radius: 5px;
-            """)
-            
+    def launch_home(self):
+        """Already on home screen"""
+        pass
+        
     def launch_music(self):
         """Switch to music player"""
         self.parent.show_screen('music')
         
+    def launch_phone(self):
+        """Launch CarPlay for phone"""
+        if hasattr(self.parent, 'carplay_manager'):
+            self.parent.carplay_manager.launch_carplay()
+            
     def launch_gps(self):
         """Switch to GPS navigation"""
         self.parent.show_screen('gps')
@@ -227,26 +426,3 @@ class HomeScreen(QWidget):
     def launch_settings(self):
         """Switch to settings screen"""
         self.parent.show_screen('settings')
-        
-    def update_carplay_status(self, connected):
-        """Update CarPlay connection status"""
-        if connected:
-            self.status_label.setText("iPhone Connected")
-            self.status_label.setStyleSheet("""
-                color: #4CAF50;
-                font-size: 18px;
-                font-weight: bold;
-                padding: 5px 10px;
-                background-color: rgba(76, 175, 80, 0.2);
-                border-radius: 5px;
-            """)
-        else:
-            self.status_label.setText("Ready")
-            self.status_label.setStyleSheet("""
-                color: #2196F3;
-                font-size: 18px;
-                font-weight: bold;
-                padding: 5px 10px;
-                background-color: rgba(33, 150, 243, 0.2);
-                border-radius: 5px;
-            """)

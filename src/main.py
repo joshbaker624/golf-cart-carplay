@@ -60,26 +60,13 @@ class GolfCartSystem(QMainWindow):
         # Set home screen as default
         self.stacked_widget.setCurrentWidget(self.home_screen)
         
-        # Apply dark theme for better visibility
+        # Apply modern dark theme
         self.setStyleSheet("""
             QMainWindow {
-                background-color: #1a1a1a;
+                background-color: #1a1f2e;
             }
-            QPushButton {
-                background-color: #2d2d2d;
-                color: white;
-                border: 2px solid #3d3d3d;
-                border-radius: 10px;
-                padding: 15px;
-                font-size: 18px;
-                font-weight: bold;
-            }
-            QPushButton:pressed {
-                background-color: #3d3d3d;
-            }
-            QLabel {
-                color: white;
-                font-size: 16px;
+            QWidget {
+                font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
             }
         """)
         

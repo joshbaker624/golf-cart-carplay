@@ -1,5 +1,6 @@
 PyQt5==5.15.7
 pyqt5-tools==5.15.7.3.2
+PyQtWebEngine==5.15.6
 python-vlc==3.0.18122
 gpsd-py3==0.3.0
 pyserial==3.5
